@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import math
 
-class SelfAttention(nn.Module):
+class Attention(nn.Module):
     def __init__(self,  
                  mask_future: bool = True,
                  attn_dropout: float = 0.0):

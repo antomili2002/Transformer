@@ -8,7 +8,7 @@ import torch
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Specify the pat to import your attention mechanism
-from modelling import SelfAttention
+from modelling import Attention
 
 # Define test data for hidden states and attention masks
 VALUE = torch.tensor(
@@ -39,7 +39,7 @@ VALUE_ATTENTION_MASK = torch.tensor([[1, 0], [1, 1]])
 # Define test data for attention outputs
 ATTENTION_TEST_DATA = [
     (
-        SelfAttention(mask_future=False),
+        Attention(mask_future=False),
         QUERY,
         QUERY,
         QUERY_ATTENTION_MASK,
@@ -89,7 +89,7 @@ ATTENTION_TEST_DATA = [
         ),
     ),
     (
-        SelfAttention(mask_future=True),
+        Attention(mask_future=True),
         QUERY,
         QUERY,
         QUERY_ATTENTION_MASK,
@@ -139,7 +139,7 @@ ATTENTION_TEST_DATA = [
         ),
     ),
     (
-        SelfAttention(mask_future=False),
+        Attention(mask_future=False),
         QUERY,
         VALUE,
         VALUE_ATTENTION_MASK,

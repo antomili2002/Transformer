@@ -1,2 +1,2 @@
-# export selfattention module
-from .SelfAttention import SelfAttention
+# export attention module
+from .Attention import Attention
