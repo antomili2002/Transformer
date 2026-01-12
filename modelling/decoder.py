@@ -31,10 +31,10 @@ class TransformerDecoderLayer(nn.Module):
                 encoder_attention_mask: Optional[torch.Tensor] = None,
                 attention_mask: Optional[torch.Tensor] = None):
         x = input
-        print("Decoder input shape:", x.shape)
-        print("Encoder output shape:", encoder.shape)
-        print("Attention mask shape:", attention_mask.shape if attention_mask is not None else None)
-        print("Encoder attention mask shape:", encoder_attention_mask.shape if encoder_attention_mask is not None else None)
+        #print("Decoder input shape:", x.shape)
+        #print("Encoder output shape:", encoder.shape)
+        #print("Attention mask shape:", attention_mask.shape if attention_mask is not None else None)
+        #print("Encoder attention mask shape:", encoder_attention_mask.shape if encoder_attention_mask is not None else None)
         
         
         tgt_mask = encoder_attention_mask

@@ -50,26 +50,26 @@ class MyBPETokenizer():
     
     def _load_gpt2_tokenizer(self):
         self.gpt2_tokenizer = GPT2Tokenizer.from_pretrained(self.save_dir)
-        self.gpt2.pad_token = self.pad_token
-        self.gpt2.bos_token = self.bos_token
-        self.gpt2.eos_token = self.eos_token
-        self.gpt2.unk_token = self.unk_token
+        self.gpt2_tokenizer.pad_token = self.pad
+        self.gpt2_tokenizer.bos_token = self.bos
+        self.gpt2_tokenizer.eos_token = self.eos
+        self.gpt2_tokenizer.unk_token = self.unk
         
     @property
     def pad_id(self):
-        return self.gpt2.pad_token_id
+        return self.gpt2_tokenizer.pad_token_id
 
     @property
     def bos_id(self):
-        return self.gpt2.bos_token_id
+        return self.gpt2_tokenizer.bos_token_id
 
     @property
     def eos_id(self):
-        return self.gpt2.eos_token_id
+        return self.gpt2_tokenizer.eos_token_id
 
     @property
     def unk_id(self):
-        return self.gpt2.unk_token_id
+        return self.gpt2_tokenizer.unk_token_id
 
     # Encoding for source / target sequences
     def encode_src(self, text, max_length=64):

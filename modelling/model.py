@@ -18,6 +18,7 @@ class Transformer(nn.Module):
                  dropout: float = 0.1):
         super().__init__()
         self.d_model = d_model
+        self.vocab_size = vocab_size
         self.embedding = EmbeddingLayer(vocab_size, d_model)
         self.positional_encoding = PositionalEncoding(d_model, max_len)
         self.encoder_layers = nn.ModuleList([
@@ -28,6 +29,8 @@ class Transformer(nn.Module):
             TransformerDecoderLayer(d_model, n_heads, dim_feedforward, dropout)
             for _ in range(num_decoder_layers)
         ])
+        # Output projection layer to convert d_model to vocab_size
+        self.output_projection = nn.Linear(d_model, vocab_size)
         
     def encode(self, src: torch.Tensor, src_mask: Optional[torch.Tensor] = None) -> torch.Tensor:
         # Scale embeddings by sqrt(d_model) and add positional encoding
@@ -53,4 +56,6 @@ class Transformer(nn.Module):
                 memory_mask: Optional[torch.Tensor] = None) -> torch.Tensor:
         memory = self.encode(src, src_mask)
         output = self.decode(tgt, memory, tgt_mask, memory_mask)
-        return output
+        # Project to vocabulary size to get logits
+        logits = self.output_projection(output)
+        return logits
