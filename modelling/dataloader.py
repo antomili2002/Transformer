@@ -115,15 +115,8 @@ class MyBPETokenizer():
     def decode(self, ids):
         # Filter out special tokens
         ids = [id for id in ids if id not in [self.pad_id, self.bos_id, self.eos_id]]
-        # The Whitespace pre-tokenizer strips spaces, so the decoder returns tokens
-        # concatenated without spaces. We need to add spaces back between tokens.
-        # Decode each token individually and join with spaces.
-        tokens = [self.tokenizer.decode([id], skip_special_tokens=False) for id in ids]
-        # Join with spaces
-        result = ' '.join(tokens)
-        # Clean up spaces before punctuation
-        result = result.replace(' .', '.').replace(' ,', ',').replace(' !', '!').replace(' ?', '?')
-        result = result.replace(' :', ':').replace(' ;', ';')
+        # Use the tokenizer's decode method which handles BPE merging correctly
+        result = self.tokenizer.decode(ids, skip_special_tokens=True)
         return result.strip()
 
 class TranslationDataset(Dataset):
