@@ -94,7 +94,7 @@ class MultiHeadAttention(nn.Module):
         scores = (query @ keys.transpose(-2, -1)) / math.sqrt(self.head_dim)
         
         # causal mask to mask out future tokens
-        if self.mask_future and Tq == Tk:
+        if future_mask and Tq == Tk:
             mask = torch.triu(
                 torch.ones(Tq, Tk, device=query.device, dtype=torch.bool), 
                 diagonal=1
