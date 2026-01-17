@@ -39,7 +39,7 @@ def test_transformer_cpu():
     
     # Check output shape
     assert output.shape == (batch_size, seq_len, d_model), f"Expected shape {(batch_size, seq_len, d_model)}, got {output.shape}"
-    print(f"✓ CPU test passed. Output shape: {output.shape}")
+    print(f"CPU test passed. Output shape: {output.shape}")
 
 
 def test_transformer_gpu():
@@ -86,7 +86,7 @@ def test_transformer_gpu():
 
 def test_transformer_with_masks():
     """Test Transformer with attention masks."""
-    print("\nTesting Transformer with attention masks...")
+    print("Testing Transformer with attention masks...")
     
     vocab_size = 1000
     d_model = 256
@@ -120,11 +120,11 @@ def test_transformer_with_masks():
     
     # Check output shape
     assert output.shape == (batch_size, seq_len, d_model), f"Expected shape {(batch_size, seq_len, d_model)}, got {output.shape}"
-    print(f"✓ Mask test passed. Output shape: {output.shape}")
+    print(f"Mask test passed. Output shape: {output.shape}")
 
 
 if __name__ == "__main__":
     test_transformer_cpu()
     #test_transformer_gpu()
     test_transformer_with_masks()
-    print("\n All tests passed!")
+    print("All tests passed!")

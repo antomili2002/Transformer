@@ -17,9 +17,7 @@ from modelling.optimizer import create_adamw_optimizer, get_optimizer_groups_inf
 
 def test_scheduler():
     """Test the learning rate scheduler."""
-    print("=" * 60)
     print("Testing Learning Rate Scheduler")
-    print("=" * 60)
     
     # Create a dummy optimizer
     model = torch.nn.Linear(10, 10)
@@ -34,7 +32,6 @@ def test_scheduler():
     
     print(f"\nd_model: 512, warmup_steps: 4000\n")
     print(f"{'Step':<10} {'Learning Rate':<20} {'Phase':<15}")
-    print("-" * 45)
     
     for step in steps:
         scheduler.current_step = step
@@ -48,7 +45,7 @@ def test_scheduler():
         
         print(f"{step:<10} {lr:<20.6e} {phase:<15}")
     
-    print("\n✓ Scheduler test passed")
+    print("Scheduler test passed")
     
     # Plot learning rate schedule
     all_steps = list(range(0, 20001, 100))
@@ -69,16 +66,14 @@ def test_scheduler():
         plt.legend()
         plt.tight_layout()
         plt.savefig('lr_schedule.png')
-        print("\n✓ Learning rate schedule plot saved to 'lr_schedule.png'")
+        print("Learning rate schedule plot saved to 'lr_schedule.png'")
     except Exception as e:
         print(f"Warning: Could not save plot: {e}")
 
 
 def test_optimizer():
     """Test AdamW optimizer setup with proper weight decay handling."""
-    print("\n" + "=" * 60)
     print("Testing AdamW Optimizer Setup")
-    print("=" * 60)
     
     # Create a transformer model
     model = Transformer(
@@ -102,43 +97,40 @@ def test_optimizer():
     # Get information about parameter groups
     groups_info = get_optimizer_groups_info(model)
     
-    print(f"\nTotal parameters: {sum(len(v) for v in groups_info.values())}")
+    print(f"Total parameters: {sum(len(v) for v in groups_info.values())}")
     print(f"Parameters with weight decay: {len(groups_info['decay'])}")
     print(f"Parameters without weight decay: {len(groups_info['no_decay'])}")
     
     # Show examples of each group
-    print("\nExamples of parameters WITH weight decay:")
+    print("Examples of parameters WITH weight decay:")
     for name in groups_info['decay'][:5]:
         print(f"  - {name}")
     
-    print("\nExamples of parameters WITHOUT weight decay (bias/norm):")
+    print("Examples of parameters WITHOUT weight decay (bias/norm):")
     for name in groups_info['no_decay'][:5]:
         print(f"  - {name}")
     
     # Verify optimizer param groups
-    print(f"\nOptimizer param groups: {len(optimizer.param_groups)}")
+    print(f"Optimizer param groups: {len(optimizer.param_groups)}")
     for i, group in enumerate(optimizer.param_groups):
-        print(f"  Group {i}: {len(group['params'])} params, weight_decay={group['weight_decay']}")
+        print(f"Group {i}: {len(group['params'])} params, weight_decay={group['weight_decay']}")
     
-    print("\n✓ Optimizer test passed")
+    print("Optimizer test passed")
 
 
 def test_scheduler_step():
     """Test scheduler step() method."""
-    print("\n" + "=" * 60)
     print("Testing Scheduler Step Method")
-    print("=" * 60)
     
     model = torch.nn.Linear(10, 10)
     optimizer = torch.optim.SGD(model.parameters(), lr=0.1)
     
     scheduler = TransformerScheduler(optimizer, d_model=512, warmup_steps=4000)
     
-    print(f"\nInitial step: {scheduler.current_step}")
+    print(f"Initial step: {scheduler.current_step}")
     print(f"Initial LR: {scheduler.get_lr():.6e}\n")
     
     print(f"{'Iteration':<12} {'Step':<8} {'Learning Rate':<20}")
-    print("-" * 40)
     
     for i in range(5):
         lr_before = scheduler.get_lr()
@@ -147,14 +139,12 @@ def test_scheduler_step():
         
         print(f"{i:<12} {scheduler.current_step:<8} {lr_after:<20.6e}")
     
-    print("\n✓ Step method test passed")
+    print("\nStep method test passed")
 
 
 def test_integration():
     """Test full training loop integration."""
-    print("\n" + "=" * 60)
     print("Testing Full Integration (Scheduler + Optimizer)")
-    print("=" * 60)
     
     # Create model
     model = Transformer(
@@ -175,7 +165,6 @@ def test_integration():
     # Simulate a few training steps
     print("\nSimulated training loop (5 steps):\n")
     print(f"{'Step':<8} {'LR':<15} {'Loss (simulated)':<20}")
-    print("-" * 43)
     
     for step in range(5):
         # Get current learning rate
@@ -189,7 +178,7 @@ def test_integration():
         # Update scheduler (this would happen after backward pass)
         scheduler.step()
     
-    print("\n✓ Integration test passed")
+    print("Integration test passed")
 
 
 if __name__ == "__main__":
@@ -197,6 +186,4 @@ if __name__ == "__main__":
     test_optimizer()
     test_scheduler_step()
     test_integration()
-    print("\n" + "=" * 60)
-    print("All tests passed! ✓")
-    print("=" * 60)
+    print("All tests passed!")
