@@ -37,14 +37,14 @@ class TransformerDecoderLayer(nn.Module):
         #print("Encoder attention mask shape:", encoder_attention_mask.shape if encoder_attention_mask is not None else None)
         
         
-        tgt_mask = encoder_attention_mask
-        src_mask = attention_mask
+        # encoder_attention_mask is usually the memory mask (masking the encoder output)
+        # attention_mask is usually the target mask (masking the decoder input, e.g. padding)
         
         attn_out = self.self_attention(
             query = x,
             keys = x,
             values = x,
-            attention_mask = src_mask,
+            attention_mask = attention_mask,
             future_mask = True,
         )
         x = x + attn_out
@@ -54,7 +54,7 @@ class TransformerDecoderLayer(nn.Module):
             query = x,
             keys = encoder,
             values = encoder,
-            attention_mask = tgt_mask,
+            attention_mask = encoder_attention_mask,
             future_mask = False,
         )
         x = x + cross_attn_out
