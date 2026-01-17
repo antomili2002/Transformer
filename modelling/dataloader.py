@@ -6,7 +6,6 @@ from tokenizers.models import BPE
 from tokenizers.trainers import BpeTrainer
 from tokenizers.pre_tokenizers import Whitespace
 from tokenizers.normalizers import NFD, Lowercase, StripAccents, Sequence
-from transformers import GPT2Tokenizer
 
 class MyBPETokenizer():
     def __init__(self, texts, vocab_size=50000, save_dir="./my_bpe_tokenizer"):
@@ -26,50 +25,66 @@ class MyBPETokenizer():
         self.unk = "[UNK]"
         
         self.special_tokens = [self.pad, self.bos, self.eos, self.unk]
-        
-        # train HF tokenizer
-        self._train_bpe(texts)
-        
+
+        # Check if tokenizer already exists
+        vocab_file = os.path.join(save_dir, "vocab.json")
+        merges_file = os.path.join(save_dir, "merges.txt")
+
+        if os.path.exists(vocab_file) and os.path.exists(merges_file):
+            print(f"Loading existing tokenizer from {save_dir}")
+        else:
+            print(f"Training new tokenizer and saving to {save_dir}")
+            self._train_bpe(texts)
+
         # load GPT2 tokenizer
         self._load_gpt2_tokenizer()
         
     def _train_bpe(self, texts):
-        tokenizer = Tokenizer(BPE(unk_token=self.unk))
-        tokenizer.normalizer = Sequence([NFD(), Lowercase()])
-        tokenizer.pre_tokenizer = Whitespace()
-        
-        trainer = BpeTrainer(vocab_size=self.vocab_size, 
+        self.tokenizer = Tokenizer(BPE(unk_token=self.unk))
+        self.tokenizer.normalizer = Sequence([NFD(), Lowercase()])
+        self.tokenizer.pre_tokenizer = Whitespace()
+
+        trainer = BpeTrainer(vocab_size=self.vocab_size,
                              special_tokens=self.special_tokens)
-        
-        tokenizer.train_from_iterator(texts, trainer=trainer)
-        
+
+        self.tokenizer.train_from_iterator(texts, trainer=trainer)
+
         if not os.path.exists(self.save_dir):
             os.makedirs(self.save_dir)
-        
-        tokenizer.model.save((self.save_dir))
-    
+
+        self.tokenizer.save(os.path.join(self.save_dir, "tokenizer.json"))
+
     def _load_gpt2_tokenizer(self):
-        self.gpt2_tokenizer = GPT2Tokenizer.from_pretrained(self.save_dir)
-        self.gpt2_tokenizer.pad_token = self.pad
-        self.gpt2_tokenizer.bos_token = self.bos
-        self.gpt2_tokenizer.eos_token = self.eos
-        self.gpt2_tokenizer.unk_token = self.unk
+        # Load the full tokenizer (with normalizer and pre-tokenizer)
+        tokenizer_file = os.path.join(self.save_dir, "tokenizer.json")
+        if os.path.exists(tokenizer_file):
+            self.tokenizer = Tokenizer.from_file(tokenizer_file)
+        else:
+            # Fallback: load just the model if full tokenizer doesn't exist
+            self.tokenizer = Tokenizer(BPE(unk_token=self.unk))
+            self.tokenizer.normalizer = Sequence([NFD(), Lowercase()])
+            self.tokenizer.pre_tokenizer = Whitespace()
+            self.tokenizer.model = BPE.from_file(
+                os.path.join(self.save_dir, "vocab.json"),
+                os.path.join(self.save_dir, "merges.txt"),
+                unk_token=self.unk
+            )
         
     @property
     def pad_id(self):
-        return self.gpt2_tokenizer.pad_token_id
+        return self.tokenizer.token_to_id(self.pad)
 
     @property
     def bos_id(self):
-        return self.gpt2_tokenizer.bos_token_id
+        return self.tokenizer.token_to_id(self.bos)
 
     @property
     def eos_id(self):
-        return self.gpt2_tokenizer.eos_token_id
+        return self.tokenizer.token_to_id(self.eos)
 
     @property
     def unk_id(self):
-        return self.gpt2_tokenizer.unk_token_id
+        return self.tokenizer.token_to_id(self.unk)
 
     # Encoding for source / target sequences
     def encode_src(self, text, max_length=64):
@@ -79,11 +94,12 @@ class MyBPETokenizer():
         return self._encode_with_bos_eos(text, max_length)
 
     def _encode_with_bos_eos(self, text, max_length):
-        # Get plain token IDs (no special tokens from GPT2)
-        ids = self.gpt2_tokenizer.encode(text, add_special_tokens=False)
+        # Encode using the tokenizer (normalization is applied automatically)
+        encoding = self.tokenizer.encode(text)
+        ids = encoding.ids
 
         # Add BOS and EOS
-        ids = [self.bos_id] + ids + [self.eos_id]
+        ids = [self.bos_id] + list(ids) + [self.eos_id]
 
         # Truncate if too long
         if len(ids) > max_length:
@@ -97,8 +113,18 @@ class MyBPETokenizer():
         return torch.tensor(ids, dtype=torch.long)
 
     def decode(self, ids):
-        # Decode while skipping special tokens
-        return self.gpt2_tokenizer.decode(ids, skip_special_tokens=True)
+        # Filter out special tokens
+        ids = [id for id in ids if id not in [self.pad_id, self.bos_id, self.eos_id]]
+        # The Whitespace pre-tokenizer strips spaces, so the decoder returns tokens
+        # concatenated without spaces. We need to add spaces back between tokens.
+        # Decode each token individually and join with spaces.
+        tokens = [self.tokenizer.decode([id], skip_special_tokens=False) for id in ids]
+        # Join with spaces
+        result = ' '.join(tokens)
+        # Clean up spaces before punctuation
+        result = result.replace(' .', '.').replace(' ,', ',').replace(' !', '!').replace(' ?', '?')
+        result = result.replace(' :', ':').replace(' ;', ';')
+        return result.strip()
 
 class TranslationDataset(Dataset):
     def __init__(self, data, tokenizer, max_src_len=64, max_tgt_len=64):
