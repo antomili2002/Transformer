@@ -27,17 +27,14 @@ class MyBPETokenizer():
         self.special_tokens = [self.pad, self.bos, self.eos, self.unk]
 
         # Check if tokenizer already exists
-        vocab_file = os.path.join(save_dir, "vocab.json")
-        merges_file = os.path.join(save_dir, "merges.txt")
+        tokenizer_file = os.path.join(save_dir, "tokenizer.json")
 
-        if os.path.exists(vocab_file) and os.path.exists(merges_file):
+        if os.path.exists(tokenizer_file):
             print(f"Loading existing tokenizer from {save_dir}")
+            self.tokenizer = Tokenizer.from_file(tokenizer_file)
         else:
             print(f"Training new tokenizer and saving to {save_dir}")
             self._train_bpe(texts)
-
-        # load GPT2 tokenizer
-        self._load_gpt2_tokenizer()
         
     def _train_bpe(self, texts):
         self.tokenizer = Tokenizer(BPE(unk_token=self.unk))
@@ -54,22 +51,6 @@ class MyBPETokenizer():
 
         self.tokenizer.save(os.path.join(self.save_dir, "tokenizer.json"))
 
-    def _load_gpt2_tokenizer(self):
-        # Load the full tokenizer (with normalizer and pre-tokenizer)
-        tokenizer_file = os.path.join(self.save_dir, "tokenizer.json")
-        if os.path.exists(tokenizer_file):
-            self.tokenizer = Tokenizer.from_file(tokenizer_file)
-        else:
-            # Fallback: load just the model if full tokenizer doesn't exist
-            self.tokenizer = Tokenizer(BPE(unk_token=self.unk))
-            self.tokenizer.normalizer = Sequence([NFD(), Lowercase()])
-            self.tokenizer.pre_tokenizer = Whitespace()
-            self.tokenizer.model = BPE.from_file(
-                os.path.join(self.save_dir, "vocab.json"),
-                os.path.join(self.save_dir, "merges.txt"),
-                unk_token=self.unk
-            )
-        
     @property
     def pad_id(self):
         return self.tokenizer.token_to_id(self.pad)

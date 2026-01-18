@@ -1,52 +1,54 @@
 # Transformer Training Configuration
+# configuration for base transformer model training on WMT17 DE-EN dataset
 
-# Model Architecture
 model:
-  vocab_size: 5001  # Will be set dynamically from tokenizer
-  d_model: 64
-  n_heads: 4
-  num_encoder_layers: 2
-  num_decoder_layers: 2
-  max_len: 64
-  dim_feedforward: 256
+  vocab_size: 37000  # Will be set dynamically from tokenizer
+  d_model: 512
+  n_heads: 8
+  num_encoder_layers: 6
+  num_decoder_layers: 6
+  max_len: 128
+  dim_feedforward: 2048
   dropout: 0.1
 
-# Training
 training:
-  num_epochs: 5
+  num_steps: 100000
   batch_size: 8
-  learning_rate: 0.0001
-  weight_decay: 0.01
-  warmup_steps: 100
+  learning_rate: 1.0
+  weight_decay: 0.0
+  warmup_steps: 4000
+  adam_beta1: 0.9
+  adam_beta2: 0.98
+  adam_eps: 0.000000001
   max_grad_norm: 1.0
 
-# Data
+  log_interval: 100
+  val_interval: 5000
+  checkpoint_interval: 10000
+
 data:
   train_path: "data/cleaned_wmt17_de_en_split_train.json"
   val_path: "data/cleaned_wmt17_de_en_split_validation.json"
   test_path: "data/cleaned_wmt17_de_en_split_test.json"
-  tokenizer_path: "data/small_bpe_tokenizer"
+  tokenizer_path: "data/bpe_tokenizer"
   num_train_samples: null  # null = use full dataset
   num_val_samples: null
   num_test_samples: null
-  max_src_len: 32
-  max_tgt_len: 32
+  max_src_len: 128
+  max_tgt_len: 128
+  num_test_samples: 10
 
-# Generation
 generation:
-  max_length: 50
+  max_length: 128
   method: "greedy"  # greedy, beam, sampling
 
-# Paths
 paths:
   checkpoint_dir: "checkpoints"
   log_dir: "logs"
   output_dir: "outputs"
 
-# Weights & Biases
 wandb:
   enabled: true
   project: "transformer-translation"
 
-# Reproducibility
 seed: 42

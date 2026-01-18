@@ -15,7 +15,13 @@ from modelling.scheduler import TransformerScheduler
 from modelling.generation import evaluate_bleu
 
 
-def load_config(config_path='../config.yaml'):
+def load_config(config_path=None):
+    if config_path is None:
+        # Get the directory where this script is located
+        script_dir = Path(__file__).parent
+        # Config is one level up from the script directory
+        config_path = script_dir.parent / 'config.yaml'
+
     with open(config_path, 'r') as f:
         return yaml.safe_load(f)
 
@@ -38,13 +44,26 @@ def load_data(config):
         if config['data']['num_val_samples'] is not None:
             val_data = val_data[:config['data']['num_val_samples']]
 
-    with open(config['data']['tokenizer_path'] + '/vocab.json', 'r') as f:
+    # Prepare tokenizer
+    tokenizer_dir = config['data']['tokenizer_path']
+    tokenizer_file = Path(tokenizer_dir) / 'tokenizer.json'
+
+    # Check if tokenizer already exists
+    if tokenizer_file.exists():
+        print(f"Loading existing tokenizer from {tokenizer_dir}")
         tokenizer_texts = ["dummy"]
+    else:
+        print(f"Training new tokenizer...")
+        # Load tokenizer training texts
+        tokenizer_text_file = Path(config['data']['train_path']).parent / 'cleaned_wmt17_de_en_texts_for_tokenizer.json'
+        with open(tokenizer_text_file, 'r', encoding='utf-8') as f:
+            tokenizer_texts = json.load(f)
+        print(f"Training tokenizer on {len(tokenizer_texts)} sentences...")
 
     tokenizer = MyBPETokenizer(
         texts=tokenizer_texts,
         vocab_size=config['model']['vocab_size'],
-        save_dir=config['data']['tokenizer_path']
+        save_dir=tokenizer_dir
     )
 
     train_dataset = TranslationDataset(
@@ -210,7 +229,9 @@ def main():
     criterion = nn.CrossEntropyLoss(ignore_index=tokenizer.pad_id)
     optimizer = create_adamw_optimizer(
         model,
-        lr=config['training']['learning_rate'],
+        learning_rate=config['training']['learning_rate'],
+        betas=(config['training']['adam_beta1'], config['training']['adam_beta2']),
+        eps=config['training']['adam_eps'],
         weight_decay=config['training']['weight_decay']
     )
     scheduler = TransformerScheduler(
@@ -223,47 +244,112 @@ def main():
         wandb.watch(model, log='all', log_freq=100)
 
     best_val_loss = float('inf')
-    train_losses = []
-    val_losses = []
 
-    print(f"Training for {config['training']['num_epochs']} epochs...")
+    total_steps = config['training']['num_steps']
+    log_interval = config['training'].get('log_interval', 100)
+    val_interval = config['training'].get('val_interval', 5000)
+    checkpoint_interval = config['training'].get('checkpoint_interval', 10000)
 
-    for epoch in range(config['training']['num_epochs']):
-        print(f"Epoch {epoch+1}/{config['training']['num_epochs']}")
+    print(f"Training for {total_steps:,} steps")
+    print(f"Logging every {log_interval} steps, validating every {val_interval} steps")
 
-        train_loss = train_epoch(
-            model, train_loader, criterion,
-            optimizer, scheduler, device, config, tokenizer
+    global_step = 0
+    running_loss = 0.0
+    model.train()
+
+    train_iter = iter(train_loader)
+    pbar = tqdm(total=total_steps, desc='Training')
+
+    while global_step < total_steps:
+        try:
+            batch = next(train_iter)
+        except StopIteration:
+            train_iter = iter(train_loader)
+            batch = next(train_iter)
+
+        src_ids = batch["src_ids"].to(device)
+        tgt_ids = batch["tgt_ids"].to(device)
+
+        tgt_input = tgt_ids[:, :-1]
+        tgt_output = tgt_ids[:, 1:]
+
+        src_mask = (src_ids != tokenizer.pad_id)
+        tgt_mask = (tgt_input != tokenizer.pad_id)
+        memory_mask = src_mask
+
+        optimizer.zero_grad()
+        output = model(src_ids, tgt_input,
+                      src_mask=src_mask,
+                      tgt_mask=tgt_mask,
+                      memory_mask=memory_mask)
+
+        vocab_size = output.shape[-1]
+        loss = criterion(
+            output.reshape(-1, vocab_size),
+            tgt_output.reshape(-1)
         )
 
-        val_loss = validate(model, val_loader, criterion, device, tokenizer)
+        loss.backward()
 
-        train_losses.append(train_loss)
-        val_losses.append(val_loss)
-
-        print(f"Train Loss: {train_loss:.4f} | Val Loss: {val_loss:.4f}")
-
-        if config['wandb']['enabled']:
-            wandb.log({
-                'epoch': epoch + 1,
-                'train_loss': train_loss,
-                'val_loss': val_loss,
-                'learning_rate': optimizer.param_groups[0]['lr']
-            })
-
-        if val_loss < best_val_loss:
-            best_val_loss = val_loss
-            save_checkpoint(
-                model, optimizer, scheduler, epoch, val_loss,
-                config, f"{config['paths']['checkpoint_dir']}/best_model.pt"
+        if config['training'].get('max_grad_norm', 0) > 0:
+            torch.nn.utils.clip_grad_norm_(
+                model.parameters(),
+                config['training']['max_grad_norm']
             )
-            print(f"Saved best model (val_loss: {val_loss:.4f})")
 
-        save_checkpoint(
-            model, optimizer, scheduler, epoch, val_loss,
-            config, f"{config['paths']['checkpoint_dir']}/model_epoch_{epoch+1}.pt"
-        )
+        optimizer.step()
+        scheduler.step()
 
+        running_loss += loss.item()
+        global_step += 1
+
+        pbar.update(1)
+        pbar.set_postfix({
+            'loss': f"{loss.item():.4f}",
+            'lr': f"{optimizer.param_groups[0]['lr']:.2e}"
+        })
+
+        if global_step % log_interval == 0:
+            avg_loss = running_loss / log_interval
+
+            if config['wandb']['enabled']:
+                wandb.log({
+                    'step': global_step,
+                    'train_loss': avg_loss,
+                    'learning_rate': optimizer.param_groups[0]['lr']
+                })
+
+            running_loss = 0.0
+
+        if global_step % val_interval == 0:
+            val_loss = validate(model, val_loader, criterion, device, tokenizer)
+
+            print(f"\nStep {global_step:,}/{total_steps:,} | Val Loss: {val_loss:.4f}")
+
+            if config['wandb']['enabled']:
+                wandb.log({
+                    'step': global_step,
+                    'val_loss': val_loss
+                })
+
+            if val_loss < best_val_loss:
+                best_val_loss = val_loss
+                save_checkpoint(
+                    model, optimizer, scheduler, global_step, val_loss,
+                    config, f"{config['paths']['checkpoint_dir']}/best_model.pt"
+                )
+                print(f"Saved best model (val_loss: {val_loss:.4f})")
+
+            model.train()
+
+        if global_step % checkpoint_interval == 0:
+            save_checkpoint(
+                model, optimizer, scheduler, global_step, loss.item(),
+                config, f"{config['paths']['checkpoint_dir']}/model_step_{global_step}.pt"
+            )
+            print(f"\nSaved checkpoint at step {global_step:,}")
+
+    pbar.close()
     print("Training complete!")
     print(f"Best validation loss: {best_val_loss:.4f}")
 
