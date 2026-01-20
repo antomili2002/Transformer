@@ -38,15 +38,17 @@ class MyBPETokenizer():
             self._train_bpe(texts)
         
     def _train_bpe(self, texts):
-        self.tokenizer = Tokenizer(BPE(unk_token=self.unk))
+        # Configure BPE with end_of_word_suffix to mark word boundaries
+        self.tokenizer = Tokenizer(BPE(unk_token=self.unk, end_of_word_suffix="</w>"))
         self.tokenizer.normalizer = Sequence([NFD(), Lowercase()])
         self.tokenizer.pre_tokenizer = Whitespace()
 
         # Add decoder to properly merge BPE subwords back together
-        self.tokenizer.decoder = BPEDecoder()
+        self.tokenizer.decoder = BPEDecoder(suffix="</w>")
 
         trainer = BpeTrainer(vocab_size=self.vocab_size,
-                             special_tokens=self.special_tokens)
+                             special_tokens=self.special_tokens,
+                             end_of_word_suffix="</w>")
 
         self.tokenizer.train_from_iterator(texts, trainer=trainer)
 
