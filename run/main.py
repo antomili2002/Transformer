@@ -9,10 +9,11 @@ from tqdm import tqdm
 import wandb
 
 from modelling.model import Transformer
+from modelling.transformer_preln import PreLNTransformer
 from modelling.dataloader import TranslationDataset, MyBPETokenizer
 from modelling.optimizer import create_adamw_optimizer
 from modelling.scheduler import TransformerScheduler
-from modelling.generation import evaluate_bleu
+from translate import evaluate_bleu
 
 
 def load_config(config_path=None):
@@ -20,7 +21,7 @@ def load_config(config_path=None):
         # Get the directory where this script is located
         script_dir = Path(__file__).parent
         # Config is one level up from the script directory
-        config_path = script_dir.parent / 'config.yaml'
+        config_path = script_dir.parent / 'config_preln.yaml'
 
     with open(config_path, 'r') as f:
         return yaml.safe_load(f)
@@ -96,7 +97,8 @@ def load_data(config):
 def create_model(config, tokenizer, device):
     vocab_size = tokenizer.tokenizer.get_vocab_size()
 
-    model = Transformer(
+    # Use PreLNTransformer instead of Transformer (Post-LN)
+    model = PreLNTransformer(
         vocab_size=vocab_size,
         d_model=config['model']['d_model'],
         n_heads=config['model']['n_heads'],
@@ -108,53 +110,6 @@ def create_model(config, tokenizer, device):
     ).to(device)
 
     return model
-
-
-def train_epoch(model, dataloader, criterion, optimizer, scheduler, device, config, tokenizer):
-    model.train()
-    total_loss = 0
-
-    pbar = tqdm(dataloader, desc='Training')
-    for batch in pbar:
-        src_ids = batch["src_ids"].to(device)
-        tgt_ids = batch["tgt_ids"].to(device)
-
-        tgt_input = tgt_ids[:, :-1]
-        tgt_output = tgt_ids[:, 1:]
-
-        # Create padding masks
-        src_mask = (src_ids != tokenizer.pad_id)
-        tgt_mask = (tgt_input != tokenizer.pad_id)
-        memory_mask = src_mask
-
-        optimizer.zero_grad()
-        output = model(src_ids, tgt_input,
-                      src_mask=src_mask,
-                      tgt_mask=tgt_mask,
-                      memory_mask=memory_mask)
-
-        vocab_size = output.shape[-1]
-        loss = criterion(
-            output.reshape(-1, vocab_size),
-            tgt_output.reshape(-1)
-        )
-
-        loss.backward()
-
-        if config['training']['max_grad_norm'] > 0:
-            torch.nn.utils.clip_grad_norm_(
-                model.parameters(),
-                config['training']['max_grad_norm']
-            )
-
-        optimizer.step()
-        scheduler.step()
-
-        total_loss += loss.item()
-        pbar.set_postfix({'loss': loss.item()})
-
-    return total_loss / len(dataloader)
-
 
 def validate(model, dataloader, criterion, device, tokenizer):
     model.eval()
@@ -208,7 +163,7 @@ def main():
     config = load_config()
     set_seed(config['seed'])
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device = torch.device('cuda:1' if torch.cuda.is_available() else 'cpu')
     print(f"Using device: {device}")
 
     if config['wandb']['enabled']:
@@ -347,7 +302,7 @@ def main():
                 model, optimizer, scheduler, global_step, loss.item(),
                 config, f"{config['paths']['checkpoint_dir']}/model_step_{global_step}.pt"
             )
-            print(f"\nSaved checkpoint at step {global_step:,}")
+            print(f"Saved checkpoint at step {global_step:,}")
 
     pbar.close()
     print("Training complete!")
@@ -366,16 +321,28 @@ def main():
         model=model,
         test_data=test_data,
         tokenizer=tokenizer,
-        max_len=config['generation']['max_length'],
         device=device,
+        config=config,
         num_samples=None  # Already limited above if needed
     )
 
     test_bleu = results['bleu_score']
-    print(f"Test BLEU Score: {test_bleu:.2f}")
+    print(f"Test BLEU Score: {test_bleu:.4f}")
 
     if config['wandb']['enabled']:
         wandb.log({'test_bleu_score': test_bleu})
+
+        columns = ["src", "tgt", "pred"]
+        translation_table = wandb.Table(columns=columns)
+
+        for src, ref, pred in zip(
+            results['source_texts'],
+            results['references'],
+            results['predictions']
+        ):
+            translation_table.add_data(src, ref, pred)
+
+        wandb.log({"test_translations": translation_table})
         wandb.finish()
 
 

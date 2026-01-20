@@ -6,6 +6,7 @@ from tokenizers.models import BPE
 from tokenizers.trainers import BpeTrainer
 from tokenizers.pre_tokenizers import Whitespace
 from tokenizers.normalizers import NFD, Lowercase, StripAccents, Sequence
+from tokenizers.decoders import BPEDecoder
 
 class MyBPETokenizer():
     def __init__(self, texts, vocab_size=50000, save_dir="./my_bpe_tokenizer"):
@@ -40,6 +41,9 @@ class MyBPETokenizer():
         self.tokenizer = Tokenizer(BPE(unk_token=self.unk))
         self.tokenizer.normalizer = Sequence([NFD(), Lowercase()])
         self.tokenizer.pre_tokenizer = Whitespace()
+
+        # Add decoder to properly merge BPE subwords back together
+        self.tokenizer.decoder = BPEDecoder()
 
         trainer = BpeTrainer(vocab_size=self.vocab_size,
                              special_tokens=self.special_tokens)
