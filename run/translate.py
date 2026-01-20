@@ -1,11 +1,49 @@
 import torch
+import torch.nn as nn
 import yaml
 import json
 from pathlib import Path
+from typing import Optional, List
+from evaluate import load
 
 from modelling.model import Transformer
 from modelling.dataloader import MyBPETokenizer
-from modelling.generation import greedy_decode
+
+
+def greedy_decode(
+    model: nn.Module,
+    src: torch.Tensor,
+    src_mask: Optional[torch.Tensor],
+    max_len: int,
+    start_token_id: int,
+    end_token_id: int,
+    device: torch.device
+):
+    model.eval()
+
+    # encode source sentence once
+    with torch.no_grad():
+        src = src.to(device)
+        if src_mask is not None:
+            src_mask = src_mask.to(device)
+
+        # Encode: [1, src_len] -> [1, src_len, d_model]
+        memory = model.encode(src, src_mask)
+
+    # initialize decoder input with start token [BOS]
+    tgt = torch.tensor([[start_token_id]], dtype=torch.long, device=device)
+
+    # Generate tokens autoregressively
+    for i in range(max_len - 1): 
+        with torch.no_grad():
+            output = model.decode(tgt, memory, tgt_mask=None, memory_mask=src_mask)
+            logits = model.output_projection(output)
+            next_token_logits = logits[:, -1, :]
+            next_token = torch.argmax(next_token_logits, dim=-1, keepdim=True)
+            tgt = torch.cat([tgt, next_token], dim=1)
+            if next_token.item() == end_token_id:
+                break
+    return tgt
 
 
 def load_config(config_path=None):
@@ -67,10 +105,43 @@ def translate_sentence(model, tokenizer, source_text, device, config):
         )
 
         output_tokens = output_ids[0].cpu().tolist()
-
         translation = tokenizer.decode(output_tokens)
 
     return translation
+
+
+def evaluate_bleu(model, test_data, tokenizer, device, config, num_samples=None):
+    bleu = load("bleu")
+    model.eval()
+
+    if num_samples is not None:
+        test_data = test_data[:num_samples]
+
+    predictions = []
+    references = []
+
+    print(f"Generating translations for {len(test_data)} samples...")
+
+    for i, sample in enumerate(test_data):
+        if (i + 1) % 10 == 0:
+            print(f"Progress: {i+1}/{len(test_data)}")
+
+        source_text = sample['src']
+        reference_text = sample['tgt']
+
+        translation = translate_sentence(model, tokenizer, source_text, device, config)
+
+        predictions.append(translation)
+        references.append([reference_text])
+
+    bleu_results = bleu.compute(predictions=predictions, references=references)
+
+    return {
+        'bleu_score': bleu_results['bleu'],
+        'predictions': predictions,
+        'references': [ref[0] for ref in references],
+        'source_texts': [sample['src'] for sample in test_data]
+    }
 
 
 def main():

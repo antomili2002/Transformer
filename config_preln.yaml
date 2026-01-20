@@ -1,0 +1,53 @@
+# Pre-LayerNorm Transformer Training Configuration
+# Optimized config for stable Pre-LN training on WMT17 DE-EN dataset
+
+model:
+  vocab_size: 37000  # Will be set dynamically from tokenizer
+  d_model: 512
+  n_heads: 8
+  num_encoder_layers: 6
+  num_decoder_layers: 6
+  max_len: 128
+  dim_feedforward: 2048
+  dropout: 0.1
+
+training:
+  num_steps: 50000  # Reduced from 100k - Pre-LN converges faster
+  batch_size: 32    # Increased from 8 - Pre-LN is more stable with larger batches
+  learning_rate: 0.0005  # Lower than Post-LN (was 1.0) - Pre-LN needs gentler learning
+  weight_decay: 0.01     # Small weight decay for regularization
+  warmup_steps: 4000
+  adam_beta1: 0.9
+  adam_beta2: 0.98
+  adam_eps: 0.000000001
+  max_grad_norm: 1.0
+
+  log_interval: 100
+  val_interval: 2000    # More frequent validation (was 5000)
+  checkpoint_interval: 5000
+
+data:
+  train_path: "data/cleaned_wmt17_de_en_split_train.json"
+  val_path: "data/cleaned_wmt17_de_en_split_validation.json"
+  test_path: "data/cleaned_wmt17_de_en_split_test.json"
+  tokenizer_path: "data/bpe_tokenizer"
+  num_train_samples: null  # null = use full dataset
+  num_val_samples: null
+  num_test_samples: 10
+  max_src_len: 128
+  max_tgt_len: 128
+
+generation:
+  max_length: 128
+  method: "greedy"  # greedy, beam, sampling
+
+paths:
+  checkpoint_dir: "checkpoints_preln"  # Separate dir for Pre-LN checkpoints
+  log_dir: "logs_preln"
+  output_dir: "outputs_preln"
+
+wandb:
+  enabled: true
+  project: "transformer-translation-preln"
+
+seed: 42
