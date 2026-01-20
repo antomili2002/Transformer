@@ -36,7 +36,7 @@ data:
   num_test_samples: null
   max_src_len: 128
   max_tgt_len: 128
-  num_test_samples: 10
+  num_test_samples: null
 
 generation:
   max_length: 128

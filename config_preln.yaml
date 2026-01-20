@@ -33,7 +33,7 @@ data:
   tokenizer_path: "data/bpe_tokenizer"
   num_train_samples: null  # null = use full dataset
   num_val_samples: null
-  num_test_samples: 10
+  num_test_samples: null  # null = use full test dataset
   max_src_len: 128
   max_tgt_len: 128
 
