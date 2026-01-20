@@ -4,6 +4,7 @@ from torch.utils.data import DataLoader
 import numpy as np
 import json
 import yaml
+import time
 from pathlib import Path
 from tqdm import tqdm
 import wandb
@@ -14,6 +15,7 @@ from modelling.dataloader import TranslationDataset, MyBPETokenizer
 from modelling.optimizer import create_adamw_optimizer
 from modelling.scheduler import TransformerScheduler
 from translate import evaluate_bleu
+from ablation_metrics import compute_layer_health
 
 
 def load_config(config_path=None):
@@ -215,7 +217,12 @@ def main():
     train_iter = iter(train_loader)
     pbar = tqdm(total=total_steps, desc='Training')
 
+    step_times = []
+    log_timing = config.get('ablation', {}).get('log_timing', False)
+    training_start_time = time.time() if log_timing else None
+
     while global_step < total_steps:
+        step_start = time.time() if log_timing else None
         try:
             batch = next(train_iter)
         except StopIteration:
@@ -258,6 +265,10 @@ def main():
         running_loss += loss.item()
         global_step += 1
 
+        if log_timing:
+            step_time = time.time() - step_start
+            step_times.append(step_time)
+
         pbar.update(1)
         pbar.set_postfix({
             'loss': f"{loss.item():.4f}",
@@ -267,12 +278,19 @@ def main():
         if global_step % log_interval == 0:
             avg_loss = running_loss / log_interval
 
+            log_dict = {
+                'step': global_step,
+                'train_loss': avg_loss,
+                'learning_rate': optimizer.param_groups[0]['lr']
+            }
+
+            if log_timing and len(step_times) > 0:
+                log_dict['time_per_step'] = np.mean(step_times)
+                log_dict['samples_per_sec'] = config['training']['batch_size'] / np.mean(step_times)
+                step_times = []
+
             if config['wandb']['enabled']:
-                wandb.log({
-                    'step': global_step,
-                    'train_loss': avg_loss,
-                    'learning_rate': optimizer.param_groups[0]['lr']
-                })
+                wandb.log(log_dict)
 
             running_loss = 0.0
 
@@ -281,11 +299,17 @@ def main():
 
             print(f"\nStep {global_step:,}/{total_steps:,} | Val Loss: {val_loss:.4f}")
 
+            log_dict = {'step': global_step, 'val_loss': val_loss}
+
+            if config.get('ablation', {}).get('log_layer_health', False):
+                sample_batch = next(iter(val_loader))
+                src_ids = sample_batch["src_ids"][:1].to(device)
+                src_mask = (src_ids != tokenizer.pad_id).to(device)
+                layer_metrics = compute_layer_health(model, src_ids, src_mask, tokenizer, device)
+                log_dict.update(layer_metrics)
+
             if config['wandb']['enabled']:
-                wandb.log({
-                    'step': global_step,
-                    'val_loss': val_loss
-                })
+                wandb.log(log_dict)
 
             if val_loss < best_val_loss:
                 best_val_loss = val_loss
@@ -305,10 +329,16 @@ def main():
             print(f"Saved checkpoint at step {global_step:,}")
 
     pbar.close()
+
+    if log_timing:
+        total_training_time = time.time() - training_start_time
+        print(f"Total training time: {total_training_time/3600:.2f} hours")
+
     print("Training complete!")
     print(f"Best validation loss: {best_val_loss:.4f}")
 
     print("\nEvaluating on test set...")
+    eval_start_time = time.time() if log_timing else None
     with open(config['data']['test_path'], 'r', encoding='utf-8') as f:
         test_data = json.load(f)
         if config['data']['num_test_samples'] is not None:
@@ -329,8 +359,21 @@ def main():
     test_bleu = results['bleu_score']
     print(f"Test BLEU Score: {test_bleu:.4f}")
 
+    if log_timing:
+        eval_time = time.time() - eval_start_time
+        total_time = total_training_time + eval_time
+        print(f"Evaluation time: {eval_time/60:.2f} minutes")
+        print(f"Total time: {total_time/3600:.2f} hours")
+
     if config['wandb']['enabled']:
-        wandb.log({'test_bleu_score': test_bleu})
+        log_dict = {'test_bleu_score': test_bleu}
+
+        if log_timing:
+            log_dict['total_training_time_hours'] = total_training_time / 3600
+            log_dict['eval_time_minutes'] = eval_time / 60
+            log_dict['total_time_hours'] = total_time / 3600
+
+        wandb.log(log_dict)
 
         columns = ["src", "tgt", "pred"]
         translation_table = wandb.Table(columns=columns)

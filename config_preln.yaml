@@ -50,4 +50,8 @@ wandb:
   enabled: true
   project: "transformer-translation-preln"
 
+ablation:
+  log_layer_health: true
+  log_timing: true
+
 seed: 42
