@@ -15,15 +15,15 @@ from modelling.dataloader import TranslationDataset, MyBPETokenizer
 from modelling.optimizer import create_adamw_optimizer
 from modelling.scheduler import TransformerScheduler
 from translate import evaluate_bleu
-from ablation_metrics import compute_layer_health
 
 
 def load_config(config_path=None):
+    file_path = 'config_postln.yaml' # config_preln or config_postln
     if config_path is None:
         # Get the directory where this script is located
         script_dir = Path(__file__).parent
         # Config is one level up from the script directory
-        config_path = script_dir.parent / 'config_preln.yaml'
+        config_path = script_dir.parent / file_path
 
     with open(config_path, 'r') as f:
         return yaml.safe_load(f)
@@ -99,8 +99,7 @@ def load_data(config):
 def create_model(config, tokenizer, device):
     vocab_size = tokenizer.tokenizer.get_vocab_size()
 
-    # Use PreLNTransformer instead of Transformer (Post-LN)
-    model = PreLNTransformer(
+    model = Transformer(
         vocab_size=vocab_size,
         d_model=config['model']['d_model'],
         n_heads=config['model']['n_heads'],
@@ -165,7 +164,7 @@ def main():
     config = load_config()
     set_seed(config['seed'])
 
-    device = torch.device('cuda:1' if torch.cuda.is_available() else 'cpu')
+    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     print(f"Using device: {device}")
 
     if config['wandb']['enabled']:
@@ -300,13 +299,6 @@ def main():
             print(f"\nStep {global_step:,}/{total_steps:,} | Val Loss: {val_loss:.4f}")
 
             log_dict = {'step': global_step, 'val_loss': val_loss}
-
-            if config.get('ablation', {}).get('log_layer_health', False):
-                sample_batch = next(iter(val_loader))
-                src_ids = sample_batch["src_ids"][:1].to(device)
-                src_mask = (src_ids != tokenizer.pad_id).to(device)
-                layer_metrics = compute_layer_health(model, src_ids, src_mask, tokenizer, device)
-                log_dict.update(layer_metrics)
 
             if config['wandb']['enabled']:
                 wandb.log(log_dict)

@@ -27,7 +27,7 @@ print(f"Pre-LN:  {preln_run.name}")
 postln_history = postln_run.history()
 preln_history = preln_run.history()
 
-# Figure 1: Training Loss
+# Training Loss
 fig, ax = plt.subplots(figsize=(SINGLE_COL_WIDTH, FIG_HEIGHT))
 ax.plot(postln_history['step'], postln_history['train_loss'], label='Post-LN', alpha=0.7, linewidth=1.5)
 ax.plot(preln_history['step'], preln_history['train_loss'], label='Pre-LN', alpha=0.7, linewidth=1.5)
@@ -41,7 +41,7 @@ plt.savefig('fig_train_loss.png', dpi=300, bbox_inches='tight')
 print("Saved fig_train_loss.pdf/png")
 plt.close()
 
-# Figure 2: Validation Loss
+# Validation Loss
 fig, ax = plt.subplots(figsize=(SINGLE_COL_WIDTH, FIG_HEIGHT))
 ax.plot(postln_history['step'], postln_history['val_loss'], label='Post-LN', marker='o', markersize=3, linewidth=1.5)
 ax.plot(preln_history['step'], preln_history['val_loss'], label='Pre-LN', marker='s', markersize=3, linewidth=1.5)
@@ -55,7 +55,7 @@ plt.savefig('fig_val_loss.png', dpi=300, bbox_inches='tight')
 print("Saved fig_val_loss.pdf/png")
 plt.close()
 
-# Figure 3: BLEU Score
+# BLEU Score
 postln_bleu = postln_run.summary.get('test_bleu_score', 0)
 preln_bleu = preln_run.summary.get('test_bleu_score', 0)
 fig, ax = plt.subplots(figsize=(SINGLE_COL_WIDTH, FIG_HEIGHT))
@@ -72,41 +72,8 @@ plt.savefig('fig_bleu_comparison.png', dpi=300, bbox_inches='tight')
 print("Saved fig_bleu_comparison.pdf/png")
 plt.close()
 
-# Figure 4: Post-LN Layer Health
-layer_cols = [col for col in postln_history.columns if 'decoder/layer_' in col and '_std' in col]
-if layer_cols:
-    fig, ax = plt.subplots(figsize=(SINGLE_COL_WIDTH, FIG_HEIGHT))
-    for col in sorted(layer_cols):
-        layer_num = col.split('_')[1]
-        ax.plot(postln_history['step'], postln_history[col], alpha=0.6, label=f'Layer {layer_num}', linewidth=1.2)
-    ax.set_xlabel('Training Step')
-    ax.set_ylabel('Standard Deviation')
-    ax.axhline(y=0.1, color='r', linestyle='--', linewidth=1.5, label='Collapse Threshold')
-    ax.legend(ncol=2, loc='best')
-    ax.grid(True, alpha=0.3)
-    plt.tight_layout()
-    plt.savefig('fig_postln_layer_health.pdf', dpi=300, bbox_inches='tight')
-    plt.savefig('fig_postln_layer_health.png', dpi=300, bbox_inches='tight')
-    print("Saved fig_postln_layer_health.pdf/png")
-    plt.close()
 
-    # Figure 5: Pre-LN Layer Health
-    fig, ax = plt.subplots(figsize=(SINGLE_COL_WIDTH, FIG_HEIGHT))
-    for col in sorted(layer_cols):
-        layer_num = col.split('_')[1]
-        ax.plot(preln_history['step'], preln_history[col], alpha=0.6, label=f'Layer {layer_num}', linewidth=1.2)
-    ax.set_xlabel('Training Step')
-    ax.set_ylabel('Standard Deviation')
-    ax.axhline(y=1.0, color='g', linestyle='--', linewidth=1.5, label='Healthy Threshold')
-    ax.legend(ncol=2, loc='best')
-    ax.grid(True, alpha=0.3)
-    plt.tight_layout()
-    plt.savefig('fig_preln_layer_health.pdf', dpi=300, bbox_inches='tight')
-    plt.savefig('fig_preln_layer_health.png', dpi=300, bbox_inches='tight')
-    print("Saved fig_preln_layer_health.pdf/png")
-    plt.close()
-
-# Figure 6: Training Speed
+# training Speed
 if 'time_per_step' in postln_history.columns and 'time_per_step' in preln_history.columns:
     fig, ax = plt.subplots(figsize=(SINGLE_COL_WIDTH, FIG_HEIGHT))
     ax.plot(postln_history['step'], postln_history['time_per_step'], label='Post-LN', alpha=0.7, linewidth=1.5)
@@ -121,7 +88,7 @@ if 'time_per_step' in postln_history.columns and 'time_per_step' in preln_histor
     print("Saved fig_training_speed.pdf/png")
     plt.close()
 
-# Figure 7: Total Time Comparison
+# Total Time Comparison
 postln_time = postln_run.summary.get('total_training_time_hours', 0)
 preln_time = preln_run.summary.get('total_training_time_hours', 0)
 if postln_time > 0 and preln_time > 0:
