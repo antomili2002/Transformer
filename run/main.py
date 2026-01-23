@@ -164,7 +164,7 @@ def main():
     config = load_config()
     set_seed(config['seed'])
 
-    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+    device = torch.device('cuda:1' if torch.cuda.is_available() else 'cpu')
     print(f"Using device: {device}")
 
     if config['wandb']['enabled']:

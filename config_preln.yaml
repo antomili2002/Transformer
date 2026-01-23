@@ -13,7 +13,7 @@ model:
 
 training:
   num_steps: 500000  
-  batch_size: 64    
+  batch_size: 16    
   learning_rate: 0.0005  
   weight_decay: 0.01     
   warmup_steps: 8000
@@ -34,11 +34,11 @@ data:
   num_train_samples: null  # null = use full dataset
   num_val_samples: null
   num_test_samples: null
-  max_src_len: 128
-  max_tgt_len: 128
+  max_src_len: 256
+  max_tgt_len: 256
 
 generation:
-  max_length: 128
+  max_length: 256
   method: "greedy"  # greedy, beam, sampling
 
 paths:
