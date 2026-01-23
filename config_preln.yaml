@@ -3,20 +3,20 @@
 
 model:
   vocab_size: 37000  # Will be set dynamically from tokenizer
-  d_model: 1024
-  n_heads: 16
-  num_encoder_layers: 12
-  num_decoder_layers: 12
-  max_len: 256
-  dim_feedforward: 4096
+  d_model: 768
+  n_heads: 12
+  num_encoder_layers: 8
+  num_decoder_layers: 8
+  max_len: 128
+  dim_feedforward: 3072
   dropout: 0.1
 
 training:
-  num_steps: 500000  
-  batch_size: 16    
-  learning_rate: 0.0005  
+  num_steps: 200000  
+  batch_size: 32    
+  learning_rate: 0.001  
   weight_decay: 0.01     
-  warmup_steps: 8000
+  warmup_steps: 4000
   adam_beta1: 0.9
   adam_beta2: 0.98
   adam_eps: 0.000000001
@@ -34,11 +34,11 @@ data:
   num_train_samples: null  # null = use full dataset
   num_val_samples: null
   num_test_samples: null
-  max_src_len: 256
-  max_tgt_len: 256
+  max_src_len: 128
+  max_tgt_len: 128
 
 generation:
-  max_length: 256
+  max_length: 128
   method: "greedy"  # greedy, beam, sampling
 
 paths:
