@@ -1,3 +1,4 @@
+import os
 import wandb
 import matplotlib.pyplot as plt
 import numpy as np
@@ -18,14 +19,17 @@ postln_runs = api.runs("transformer-translation")
 preln_runs = api.runs("transformer-translation-preln")
 
 postln_run = postln_runs[0]
-preln_run = preln_runs[0]
+preln_run = preln_runs[4]
 
-print(f"Comparing runs:")
+print(f"\nComparing runs:")
 print(f"Post-LN: {postln_run.name}")
 print(f"Pre-LN:  {preln_run.name}")
 
 postln_history = postln_run.history()
 preln_history = preln_run.history()
+
+save_dir = "./figures/"
+os.makedirs(save_dir, exist_ok=True)
 
 # Training Loss
 fig, ax = plt.subplots(figsize=(SINGLE_COL_WIDTH, FIG_HEIGHT))
@@ -36,22 +40,24 @@ ax.set_ylabel('Training Loss')
 ax.legend()
 ax.grid(True, alpha=0.3)
 plt.tight_layout()
-plt.savefig('fig_train_loss.pdf', dpi=300, bbox_inches='tight')
-plt.savefig('fig_train_loss.png', dpi=300, bbox_inches='tight')
+plt.savefig(f'{save_dir}fig_train_loss.pdf', dpi=300, bbox_inches='tight')
+plt.savefig(f'{save_dir}fig_train_loss.png', dpi=300, bbox_inches='tight')
 print("Saved fig_train_loss.pdf/png")
 plt.close()
 
 # Validation Loss
 fig, ax = plt.subplots(figsize=(SINGLE_COL_WIDTH, FIG_HEIGHT))
-ax.plot(postln_history['step'], postln_history['val_loss'], label='Post-LN', marker='o', markersize=3, linewidth=1.5)
-ax.plot(preln_history['step'], preln_history['val_loss'], label='Pre-LN', marker='s', markersize=3, linewidth=1.5)
+postln_val = postln_history[['step', 'val_loss']].dropna()
+preln_val = preln_history[['step', 'val_loss']].dropna()
+ax.plot(postln_val['step'], postln_val['val_loss'], label='Post-LN', marker='o', markersize=4, linewidth=2, linestyle='-')
+ax.plot(preln_val['step'], preln_val['val_loss'], label='Pre-LN', marker='s', markersize=4, linewidth=2, linestyle='-')
 ax.set_xlabel('Training Step')
 ax.set_ylabel('Validation Loss')
 ax.legend()
 ax.grid(True, alpha=0.3)
 plt.tight_layout()
-plt.savefig('fig_val_loss.pdf', dpi=300, bbox_inches='tight')
-plt.savefig('fig_val_loss.png', dpi=300, bbox_inches='tight')
+plt.savefig(f'{save_dir}fig_val_loss.pdf', dpi=300, bbox_inches='tight')
+plt.savefig(f'{save_dir}fig_val_loss.png', dpi=300, bbox_inches='tight')
 print("Saved fig_val_loss.pdf/png")
 plt.close()
 
@@ -67,8 +73,8 @@ for i, bar in enumerate(bars):
     ax.text(bar.get_x() + bar.get_width()/2., height,
             f'{height:.4f}', ha='center', va='bottom', fontsize=8)
 plt.tight_layout()
-plt.savefig('fig_bleu_comparison.pdf', dpi=300, bbox_inches='tight')
-plt.savefig('fig_bleu_comparison.png', dpi=300, bbox_inches='tight')
+plt.savefig(f'{save_dir}fig_bleu_comparison.pdf', dpi=300, bbox_inches='tight')
+plt.savefig(f'{save_dir}fig_bleu_comparison.png', dpi=300, bbox_inches='tight')
 print("Saved fig_bleu_comparison.pdf/png")
 plt.close()
 
@@ -83,8 +89,8 @@ if 'time_per_step' in postln_history.columns and 'time_per_step' in preln_histor
     ax.legend()
     ax.grid(True, alpha=0.3)
     plt.tight_layout()
-    plt.savefig('fig_training_speed.pdf', dpi=300, bbox_inches='tight')
-    plt.savefig('fig_training_speed.png', dpi=300, bbox_inches='tight')
+    plt.savefig(f'{save_dir}fig_training_speed.pdf', dpi=300, bbox_inches='tight')
+    plt.savefig(f'{save_dir}fig_training_speed.png', dpi=300, bbox_inches='tight')
     print("Saved fig_training_speed.pdf/png")
     plt.close()
 
@@ -101,8 +107,8 @@ if postln_time > 0 and preln_time > 0:
         ax.text(bar.get_x() + bar.get_width()/2., height,
                 f'{height:.2f}h', ha='center', va='bottom', fontsize=8)
     plt.tight_layout()
-    plt.savefig('fig_total_time.pdf', dpi=300, bbox_inches='tight')
-    plt.savefig('fig_total_time.png', dpi=300, bbox_inches='tight')
+    plt.savefig(f'{save_dir}fig_total_time.pdf', dpi=300, bbox_inches='tight')
+    plt.savefig(f'{save_dir}fig_total_time.png', dpi=300, bbox_inches='tight')
     print("Saved fig_total_time.pdf/png")
     plt.close()
 
