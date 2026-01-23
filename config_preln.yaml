@@ -3,20 +3,20 @@
 
 model:
   vocab_size: 37000  # Will be set dynamically from tokenizer
-  d_model: 512
-  n_heads: 8
-  num_encoder_layers: 6
-  num_decoder_layers: 6
-  max_len: 128
-  dim_feedforward: 2048
+  d_model: 1024
+  n_heads: 16
+  num_encoder_layers: 12
+  num_decoder_layers: 12
+  max_len: 256
+  dim_feedforward: 4096
   dropout: 0.1
 
 training:
-  num_steps: 50000  # Reduced from 100k Pre-LN converges faster
-  batch_size: 32    # Increased from 8 Pre-LN is more stable with larger batches
-  learning_rate: 0.0005  # Lower than Post-LN (was 1.0) Pre-LN needs gentler learning
-  weight_decay: 0.01     # Small weight decay for regularization
-  warmup_steps: 4000
+  num_steps: 500000  
+  batch_size: 64    
+  learning_rate: 0.0005  
+  weight_decay: 0.01     
+  warmup_steps: 8000
   adam_beta1: 0.9
   adam_beta2: 0.98
   adam_eps: 0.000000001
@@ -24,7 +24,7 @@ training:
 
   log_interval: 100
   val_interval: 2000    # More frequent validation (was 5000)
-  checkpoint_interval: 5000
+  checkpoint_interval: 10000
 
 data:
   train_path: "data/cleaned_wmt17_de_en_split_train.json"
@@ -42,9 +42,9 @@ generation:
   method: "greedy"  # greedy, beam, sampling
 
 paths:
-  checkpoint_dir: "checkpoints_preln"  # Separate dir for Pre-LN checkpoints
-  log_dir: "logs_preln"
-  output_dir: "outputs_preln"
+  checkpoint_dir: "checkpoints_preln_big"  # Separate dir for Pre-LN checkpoints
+  log_dir: "logs_preln_big"
+  output_dir: "outputs_preln_big"
 
 wandb:
   enabled: true

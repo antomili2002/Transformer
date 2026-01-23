@@ -18,7 +18,7 @@ from translate import evaluate_bleu
 
 
 def load_config(config_path=None):
-    file_path = 'config_postln.yaml' # config_preln or config_postln
+    file_path = 'config_preln.yaml' # config_preln or config_postln
     if config_path is None:
         # Get the directory where this script is located
         script_dir = Path(__file__).parent
@@ -99,7 +99,7 @@ def load_data(config):
 def create_model(config, tokenizer, device):
     vocab_size = tokenizer.tokenizer.get_vocab_size()
 
-    model = Transformer(
+    model = PreLNTransformer(
         vocab_size=vocab_size,
         d_model=config['model']['d_model'],
         n_heads=config['model']['n_heads'],
