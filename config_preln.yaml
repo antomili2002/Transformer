@@ -1,29 +1,27 @@
 # Pre-LayerNorm Transformer Training Configuration
-# Optimized config for stable Pre-LN training on WMT17 DE-EN dataset
-
 model:
   vocab_size: 37000  # Will be set dynamically from tokenizer
-  d_model: 768
-  n_heads: 12
-  num_encoder_layers: 8
-  num_decoder_layers: 8
+  d_model: 512
+  n_heads: 8
+  num_encoder_layers: 6
+  num_decoder_layers: 6
   max_len: 128
-  dim_feedforward: 3072
+  dim_feedforward: 2048
   dropout: 0.1
 
 training:
-  num_steps: 200000  
-  batch_size: 32    
-  learning_rate: 0.001  
-  weight_decay: 0.01     
-  warmup_steps: 4000
+  num_steps: 200000  # Increased to see ~2.5 epochs
+  batch_size: 128     
+  learning_rate: 0.0005  # Standard for d_model=512
+  weight_decay: 0.01
+  warmup_steps: 4000     # 2% of training steps
   adam_beta1: 0.9
   adam_beta2: 0.98
   adam_eps: 0.000000001
   max_grad_norm: 1.0
 
   log_interval: 100
-  val_interval: 2000    # More frequent validation (was 5000)
+  val_interval: 5000
   checkpoint_interval: 10000
 
 data:
@@ -42,9 +40,9 @@ generation:
   method: "greedy"  # greedy, beam, sampling
 
 paths:
-  checkpoint_dir: "checkpoints_preln_big"  # Separate dir for Pre-LN checkpoints
-  log_dir: "logs_preln_big"
-  output_dir: "outputs_preln_big"
+  checkpoint_dir: "checkpoints_preln"
+  log_dir: "logs_preln"
+  output_dir: "outputs_preln"
 
 wandb:
   enabled: true
