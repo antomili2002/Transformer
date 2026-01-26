@@ -3,5 +3,5 @@ __pycache__/
 .vscode/
 data/
 wandb/
-checkpoints/
-checkpoints_preln/
+checkpoints*/
+*.log

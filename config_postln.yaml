@@ -12,10 +12,10 @@ model:
   dropout: 0.1
 
 training:
-  num_steps: 100000
-  batch_size: 8
-  learning_rate: 1.0
-  weight_decay: 0.0
+  num_steps: 200000  # Increased to see ~2.5 epochs 
+  batch_size: 128    
+  learning_rate: 0.001  # Slightly higher for Post-LN
+  weight_decay: 0.01     
   warmup_steps: 4000
   adam_beta1: 0.9
   adam_beta2: 0.98
@@ -50,5 +50,8 @@ paths:
 wandb:
   enabled: true
   project: "transformer-translation"
+
+ablation:
+  log_timing: true
 
 seed: 42
