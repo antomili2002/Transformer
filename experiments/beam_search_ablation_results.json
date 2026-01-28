@@ -4,34 +4,44 @@
     "method": "greedy",
     "beam_size": null,
     "length_penalty": null,
-    "bleu": 0.18998293485348378
+    "bleu": 0.18998293485348378,
+    "avg_time": 0.11320421428880757,
+    "total_time": 312.5568356513977
   },
   {
-    "name": "Beam (k=3, alpha=0.6)",
+    "name": "Beam k=3",
     "method": "beam",
     "beam_size": 3,
     "length_penalty": 0.6,
-    "bleu": 0.19704908674893196
+    "bleu": 0.19704908674893196,
+    "avg_time": 0.7141209336909122,
+    "total_time": 1971.6878979206085
   },
   {
-    "name": "Beam (k=5, alpha=0.6)",
+    "name": "Beam k=5",
     "method": "beam",
     "beam_size": 5,
     "length_penalty": 0.6,
-    "bleu": 0.19857204938116632
+    "bleu": 0.19857204938116632,
+    "avg_time": 1.711075118899734,
+    "total_time": 4724.2784032821655
   },
   {
-    "name": "Beam (k=5, alpha=1.0)",
+    "name": "Beam k=5 alpha=1.0",
     "method": "beam",
     "beam_size": 5,
     "length_penalty": 1.0,
-    "bleu": 0.19786196263676786
+    "bleu": 0.19786196263676786,
+    "avg_time": 1.7048843244589225,
+    "total_time": 4707.185619831085
   },
   {
-    "name": "Beam (k=10, alpha=0.6)",
+    "name": "Beam k=10",
     "method": "beam",
     "beam_size": 10,
     "length_penalty": 0.6,
-    "bleu": 0.1987112623854235
+    "bleu": 0.1987112623854235,
+    "avg_time": 4.324559823536691,
+    "total_time": 11940.109672784805
   }
 ]
